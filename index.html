@@ -16,7 +16,7 @@
       margin: auto;
       background: #333;
     }
-    #controls, #menu, #fighterSelect {
+    #controls, #menu, #fighterSelect, #gameOver {
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
@@ -28,7 +28,7 @@
     #controls {
       bottom: 20px;
     }
-    #menu, #fighterSelect {
+    #menu, #fighterSelect, #gameOver {
       top: 100px;
       flex-direction: column;
     }
@@ -51,10 +51,11 @@
   </div>
 
   <div id="fighterSelect" style="display:none;"></div>
+  <div id="gameOver" style="display:none;"><button onclick="location.reload()">PLAY AGAIN</button></div>
 
   <div id="controls" style="display:none;">
-    <button onclick="move('left')">◀</button>
-    <button onclick="move('right')">▶</button>
+    <button onmousedown="startMove('left')" onmouseup="stopMove()">◀</button>
+    <button onmousedown="startMove('right')" onmouseup="stopMove()">▶</button>
     <button onclick="punch()">🥊</button>
     <button onclick="block()">🛡</button>
   </div>
@@ -66,6 +67,8 @@
     let player = null;
     let cpu = null;
     let selecting = 'player';
+    let moveInterval = null;
+    let cpuDirection = -1;
 
     const fighters = [
       { name: 'Red', color: 'red' },
@@ -87,14 +90,14 @@
         btn.innerText = f.name;
         btn.onclick = () => {
           if (selecting === 'player') {
-            player = { x: 100, y: 300, color: f.color, blocking: false };
+            player = { x: 100, y: 300, color: f.color, blocking: false, hp: 100 };
             selecting = 'cpu';
             showFighterSelect();
           } else {
-            cpu = { x: 600, y: 300, color: f.color, hp: 100, blocking: false };
+            cpu = { x: 600, y: 300, color: f.color, blocking: false, hp: 100 };
             div.style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
-            update();
+            gameLoop();
           }
         }
         div.appendChild(btn);
@@ -112,14 +115,15 @@
 
     function drawFighter(f) {
       ctx.fillStyle = f.color;
-      ctx.fillRect(f.x, f.y - 50, 30, 50); // telo
+      ctx.fillRect(f.x, f.y - 50, 30, 50);
       ctx.fillStyle = 'white';
-      ctx.fillRect(f.x, f.y - 60, 30, 10); // glava
+      ctx.fillRect(f.x, f.y - 60, 30, 10);
     }
 
     function drawHP() {
       ctx.fillStyle = 'white';
       ctx.font = '16px sans-serif';
+      ctx.fillText("Your HP: " + player.hp, 50, 20);
       ctx.fillText("CPU HP: " + cpu.hp, 650, 20);
     }
 
@@ -129,20 +133,29 @@
       drawFighter(player);
       drawFighter(cpu);
       drawHP();
+
+      if (player.hp <= 0 || cpu.hp <= 0) {
+        endGame();
+      }
     }
 
-    function move(dir) {
-      if (dir === 'left') player.x -= 10;
-      if (dir === 'right') player.x += 10;
-      update();
+    function startMove(dir) {
+      stopMove();
+      moveInterval = setInterval(() => {
+        if (dir === 'left') player.x -= 5;
+        if (dir === 'right') player.x += 5;
+        update();
+      }, 50);
+    }
+
+    function stopMove() {
+      clearInterval(moveInterval);
     }
 
     function punch() {
-      if (Math.abs(player.x - cpu.x) < 50) {
-        if (!cpu.blocking) {
-          cpu.hp -= 10;
-          if (cpu.hp < 0) cpu.hp = 0;
-        }
+      if (Math.abs(player.x - cpu.x) < 50 && !cpu.blocking) {
+        cpu.hp -= 5;
+        if (cpu.hp < 0) cpu.hp = 0;
       }
       update();
     }
@@ -153,6 +166,30 @@
         player.blocking = false;
         update();
       }, 1000);
+    }
+
+    function cpuAI() {
+      const distance = cpu.x - player.x;
+      if (Math.abs(distance) > 40) {
+        cpu.x += distance > 0 ? -3 : 3;
+      } else if (!player.blocking && Math.random() < 0.05) {
+        player.hp -= 5;
+        if (player.hp < 0) player.hp = 0;
+      }
+    }
+
+    function gameLoop() {
+      setInterval(() => {
+        if (player && cpu && player.hp > 0 && cpu.hp > 0) {
+          cpuAI();
+          update();
+        }
+      }, 100);
+    }
+
+    function endGame() {
+      document.getElementById('controls').style.display = 'none';
+      document.getElementById('gameOver').style.display = 'flex';
     }
   </script>
 </body>
