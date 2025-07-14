@@ -7,6 +7,8 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background-color: #111;
+      color: white;
+      font-family: sans-serif;
       overflow: hidden;
     }
     canvas {
@@ -14,27 +16,43 @@
       margin: auto;
       background: #333;
     }
-    #controls {
+    #controls, #menu, #fighterSelect {
       position: absolute;
-      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 10px;
     }
+    #controls {
+      bottom: 20px;
+    }
+    #menu, #fighterSelect {
+      top: 100px;
+      flex-direction: column;
+    }
     button {
-      padding: 20px;
-      font-size: 16px;
+      padding: 15px 30px;
+      font-size: 18px;
       border-radius: 10px;
       background-color: red;
       color: white;
       border: none;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <canvas id="game" width="800" height="400"></canvas>
-  <div id="controls">
+
+  <div id="menu">
+    <button onclick="showFightMenu()">PLAY</button>
+  </div>
+
+  <div id="fighterSelect" style="display:none;"></div>
+
+  <div id="controls" style="display:none;">
     <button onclick="move('left')">◀</button>
     <button onclick="move('right')">▶</button>
     <button onclick="punch()">🥊</button>
@@ -45,22 +63,44 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    const boxerImages = {};
-    const boxerNames = ['red', 'blue', 'green', 'yellow'];
-    let imagesLoaded = 0;
+    let player = null;
+    let cpu = null;
+    let selecting = 'player';
 
-    boxerNames.forEach(name => {
-      const img = new Image();
-      img.src = `./${name}_boxer.png`;
-      img.onload = () => {
-        imagesLoaded++;
-        if (imagesLoaded === boxerNames.length) update();
-      }
-      boxerImages[name] = img;
-    });
+    const fighters = [
+      { name: 'Red', color: 'red' },
+      { name: 'Blue', color: 'blue' },
+      { name: 'Green', color: 'green' },
+      { name: 'Yellow', color: 'yellow' }
+    ];
 
-    let player = { x: 100, y: 300, color: 'red', blocking: false };
-    let cpu = { x: 600, y: 300, color: 'blue', hp: 100, blocking: false };
+    function showFightMenu() {
+      document.getElementById('menu').style.display = 'none';
+      showFighterSelect();
+    }
+
+    function showFighterSelect() {
+      const div = document.getElementById('fighterSelect');
+      div.innerHTML = `<h2>Choose ${selecting === 'player' ? 'Your Fighter' : 'CPU Opponent'}</h2>`;
+      fighters.forEach(f => {
+        const btn = document.createElement('button');
+        btn.innerText = f.name;
+        btn.onclick = () => {
+          if (selecting === 'player') {
+            player = { x: 100, y: 300, color: f.color, blocking: false };
+            selecting = 'cpu';
+            showFighterSelect();
+          } else {
+            cpu = { x: 600, y: 300, color: f.color, hp: 100, blocking: false };
+            div.style.display = 'none';
+            document.getElementById('controls').style.display = 'flex';
+            update();
+          }
+        }
+        div.appendChild(btn);
+      });
+      div.style.display = 'flex';
+    }
 
     function drawRing() {
       ctx.fillStyle = '#222';
@@ -70,9 +110,11 @@
       ctx.strokeRect(50, 200, 700, 150);
     }
 
-    function drawFighter(fighter) {
-      const img = boxerImages[fighter.color];
-      ctx.drawImage(img, fighter.x, fighter.y - 50, 40, 50);
+    function drawFighter(f) {
+      ctx.fillStyle = f.color;
+      ctx.fillRect(f.x, f.y - 50, 30, 50); // telo
+      ctx.fillStyle = 'white';
+      ctx.fillRect(f.x, f.y - 60, 30, 10); // glava
     }
 
     function drawHP() {
