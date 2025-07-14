@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LETS FIGHT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #111;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: #333;
+    }
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 20px;
+      font-size: 16px;
+      border-radius: 10px;
+      background-color: red;
+      color: white;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="400"></canvas>
+  <div id="controls">
+    <button onclick="move('left')">◀</button>
+    <button onclick="move('right')">▶</button>
+    <button onclick="punch()">🥊</button>
+    <button onclick="block()">🛡</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const boxerImages = {};
+    const boxerNames = ['red', 'blue', 'green', 'yellow'];
+    let imagesLoaded = 0;
+
+    boxerNames.forEach(name => {
+      const img = new Image();
+      img.src = `./${name}_boxer.png`;
+      img.onload = () => {
+        imagesLoaded++;
+        if (imagesLoaded === boxerNames.length) update();
+      }
+      boxerImages[name] = img;
+    });
+
+    let player = { x: 100, y: 300, color: 'red', blocking: false };
+    let cpu = { x: 600, y: 300, color: 'blue', hp: 100, blocking: false };
+
+    function drawRing() {
+      ctx.fillStyle = '#222';
+      ctx.fillRect(0, 350, 800, 50);
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(50, 200, 700, 150);
+    }
+
+    function drawFighter(fighter) {
+      const img = boxerImages[fighter.color];
+      ctx.drawImage(img, fighter.x, fighter.y - 50, 40, 50);
+    }
+
+    function drawHP() {
+      ctx.fillStyle = 'white';
+      ctx.font = '16px sans-serif';
+      ctx.fillText("CPU HP: " + cpu.hp, 650, 20);
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawRing();
+      drawFighter(player);
+      drawFighter(cpu);
+      drawHP();
+    }
+
+    function move(dir) {
+      if (dir === 'left') player.x -= 10;
+      if (dir === 'right') player.x += 10;
+      update();
+    }
+
+    function punch() {
+      if (Math.abs(player.x - cpu.x) < 50) {
+        if (!cpu.blocking) {
+          cpu.hp -= 10;
+          if (cpu.hp < 0) cpu.hp = 0;
+        }
+      }
+      update();
+    }
+
+    function block() {
+      player.blocking = true;
+      setTimeout(() => {
+        player.blocking = false;
+        update();
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
