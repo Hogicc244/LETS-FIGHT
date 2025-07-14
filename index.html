@@ -69,6 +69,8 @@
     let selecting = 'player';
     let moveInterval = null;
     let cpuDirection = -1;
+    let punchCount = 0;
+    let canPunch = true;
 
     const fighters = [
       { name: 'Red', color: 'red' },
@@ -90,11 +92,11 @@
         btn.innerText = f.name;
         btn.onclick = () => {
           if (selecting === 'player') {
-            player = { x: 100, y: 300, color: f.color, blocking: false, hp: 100 };
+            player = { x: 100, y: 300, color: f.color, blocking: false, hp: 100, punching: false };
             selecting = 'cpu';
             showFighterSelect();
           } else {
-            cpu = { x: 600, y: 300, color: f.color, blocking: false, hp: 100 };
+            cpu = { x: 600, y: 300, color: f.color, blocking: false, hp: 100, punching: false };
             div.style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
             gameLoop();
@@ -115,9 +117,22 @@
 
     function drawFighter(f) {
       ctx.fillStyle = f.color;
-      ctx.fillRect(f.x, f.y - 50, 30, 50);
+      ctx.fillRect(f.x, f.y - 50, 30, 50); // telo
       ctx.fillStyle = 'white';
-      ctx.fillRect(f.x, f.y - 60, 30, 10);
+      ctx.fillRect(f.x, f.y - 60, 30, 10); // glava
+
+      // Animacija udarca (ruka)
+      if (f.punching) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(f.x + 30, f.y - 40, 20, 10);
+      }
+
+      // Animacija bloka (garda)
+      if (f.blocking) {
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(f.x - 5, f.y - 65, 40, 70);
+      }
     }
 
     function drawHP() {
@@ -153,11 +168,27 @@
     }
 
     function punch() {
+      if (!canPunch) return;
+      punchCount++;
+      player.punching = true;
+      setTimeout(() => {
+        player.punching = false;
+        update();
+      }, 300);
+
       if (Math.abs(player.x - cpu.x) < 50 && !cpu.blocking) {
         cpu.hp -= 5;
         if (cpu.hp < 0) cpu.hp = 0;
       }
       update();
+
+      if (punchCount >= 3) {
+        canPunch = false;
+        setTimeout(() => {
+          punchCount = 0;
+          canPunch = true;
+        }, 1500); // vreme za oporavak
+      }
     }
 
     function block() {
@@ -166,15 +197,33 @@
         player.blocking = false;
         update();
       }, 1000);
+      update();
     }
 
     function cpuAI() {
       const distance = cpu.x - player.x;
+
       if (Math.abs(distance) > 40) {
         cpu.x += distance > 0 ? -3 : 3;
-      } else if (!player.blocking && Math.random() < 0.05) {
-        player.hp -= 5;
-        if (player.hp < 0) player.hp = 0;
+      } else {
+        if (Math.random() < 0.2 && !cpu.punching) {
+          cpu.punching = true;
+          setTimeout(() => {
+            cpu.punching = false;
+            update();
+          }, 300);
+
+          if (!player.blocking) {
+            player.hp -= 5;
+            if (player.hp < 0) player.hp = 0;
+          }
+        } else if (Math.random() < 0.05) {
+          cpu.blocking = true;
+          setTimeout(() => {
+            cpu.blocking = false;
+            update();
+          }, 1000);
+        }
       }
     }
 
